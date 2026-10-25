@@ -1,3 +1,14 @@
+## Question: how to release next feature
+
+# After editing the app, run a local check if you like, then commit and push:
+
+npm run build
+git add src public index.html vite.config.ts
+git commit -m "Update app"
+git push
+
+The push starts the workflow automatically. Check Actions if the site doesn’t update.
+
 ## Question: now tell me how to use this skill file for a feauter, like what prompt and what input i need to provide
 
 ---

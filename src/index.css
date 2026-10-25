@@ -8,8 +8,8 @@
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-  color: #35443b;
-  background: #f6f8f5;
+  color: #35495b;
+  background: #f3f8fb;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -38,6 +38,6 @@ button {
 }
 
 ::selection {
-  color: #234331;
-  background: #d9eadd;
+  color: #294f6b;
+  background: #d9ecf7;
 }

@@ -53,7 +53,8 @@ type BackupFile = {
 const STORAGE_KEY = "knowledge-base-todos";
 const SORT_STORAGE_KEY = "knowledge-base-todo-sort";
 const TAGS_STORAGE_KEY = "knowledge-base-todo-tags";
-const DEFAULT_TREE_LINE_COLOR = "#829b8a";
+const DEFAULT_TREE_LINE_COLOR = "#7598b2";
+const PREVIOUS_DEFAULT_TREE_LINE_COLOR = "#829b8a";
 
 function isTodo(value: unknown): value is Todo {
   if (typeof value !== "object" || value === null) return false;
@@ -75,6 +76,12 @@ function isTodo(value: unknown): value is Todo {
       (Array.isArray(todo.tagIds) &&
         todo.tagIds.every((tagId) => typeof tagId === "string")))
   );
+}
+
+function migrateTodoTreeLineColor(todo: Todo): Todo {
+  return todo.treeLineColor?.toLowerCase() === PREVIOUS_DEFAULT_TREE_LINE_COLOR
+    ? { ...todo, treeLineColor: DEFAULT_TREE_LINE_COLOR }
+    : todo;
 }
 
 function isTodoTag(value: unknown): value is TodoTag {
@@ -108,7 +115,9 @@ function readTodos(): Todo[] {
     if (!stored) return [];
 
     const parsed: unknown = JSON.parse(stored);
-    return Array.isArray(parsed) && parsed.every(isTodo) ? parsed : [];
+    return Array.isArray(parsed) && parsed.every(isTodo)
+      ? parsed.map(migrateTodoTreeLineColor)
+      : [];
   } catch {
     return [];
   }
@@ -136,7 +145,7 @@ function getTagTextColor(color: string): string {
   const green = (colorValue >> 8) & 255;
   const blue = colorValue & 255;
   const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
-  return luminance > 0.62 ? "#24352b" : "#ffffff";
+  return luminance > 0.62 ? "#243c50" : "#ffffff";
 }
 
 function App() {
@@ -152,7 +161,7 @@ function App() {
     useState<DeleteConfirmationState | null>(null);
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
   const [tagText, setTagText] = useState("");
-  const [tagColor, setTagColor] = useState("#478565");
+  const [tagColor, setTagColor] = useState("#39749a");
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
   const [selectedTagFilterIds, setSelectedTagFilterIds] = useState<Set<string>>(
     () => new Set(),
@@ -572,7 +581,7 @@ function App() {
       setNotice(`Tag "${text}" added.`);
     }
     setTagText("");
-    setTagColor("#478565");
+    setTagColor("#39749a");
     setEditingTagId(null);
   }
 
@@ -661,7 +670,7 @@ function App() {
     if (editingTagId === tagId) {
       setEditingTagId(null);
       setTagText("");
-      setTagColor("#478565");
+      setTagColor("#39749a");
     }
     setNotice(`Tag "${removedTagText}" and its todo assignments were removed.`);
     setDeleteConfirmation(null);
@@ -921,7 +930,7 @@ function App() {
         throw new Error("This file is not a valid Knowledge Base backup.");
       }
 
-      setTodos(parsed.todos);
+      setTodos(parsed.todos.map(migrateTodoTreeLineColor));
       if ("tags" in parsed && Array.isArray(parsed.tags)) setTags(parsed.tags);
       setNotice(
         `Backup restored: ${parsed.todos.length} todo${parsed.todos.length === 1 ? "" : "s"} imported.`,
@@ -1003,7 +1012,7 @@ function App() {
                   type="button"
                   onClick={() => {
                     setTagText("");
-                    setTagColor("#478565");
+                    setTagColor("#39749a");
                     setEditingTagId(null);
                     setIsTagDialogOpen(true);
                   }}
@@ -1583,7 +1592,7 @@ function App() {
                     onClick={() => {
                       setEditingTagId(null);
                       setTagText("");
-                      setTagColor("#478565");
+                      setTagColor("#39749a");
                     }}
                   >
                     Cancel edit
