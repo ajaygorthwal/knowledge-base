@@ -53,8 +53,8 @@ type BackupFile = {
 const STORAGE_KEY = "knowledge-base-todos";
 const SORT_STORAGE_KEY = "knowledge-base-todo-sort";
 const TAGS_STORAGE_KEY = "knowledge-base-todo-tags";
-const DEFAULT_TREE_LINE_COLOR = "#7598b2";
-const PREVIOUS_DEFAULT_TREE_LINE_COLOR = "#829b8a";
+const DEFAULT_TREE_LINE_COLOR = "#7b87e8";
+const PREVIOUS_DEFAULT_TREE_LINE_COLORS = new Set(["#829b8a", "#7598b2"]);
 
 function isTodo(value: unknown): value is Todo {
   if (typeof value !== "object" || value === null) return false;
@@ -79,7 +79,7 @@ function isTodo(value: unknown): value is Todo {
 }
 
 function migrateTodoTreeLineColor(todo: Todo): Todo {
-  return todo.treeLineColor?.toLowerCase() === PREVIOUS_DEFAULT_TREE_LINE_COLOR
+  return PREVIOUS_DEFAULT_TREE_LINE_COLORS.has(todo.treeLineColor?.toLowerCase() ?? "")
     ? { ...todo, treeLineColor: DEFAULT_TREE_LINE_COLOR }
     : todo;
 }
@@ -161,7 +161,7 @@ function App() {
     useState<DeleteConfirmationState | null>(null);
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
   const [tagText, setTagText] = useState("");
-  const [tagColor, setTagColor] = useState("#39749a");
+  const [tagColor, setTagColor] = useState("#536bea");
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
   const [selectedTagFilterIds, setSelectedTagFilterIds] = useState<Set<string>>(
     () => new Set(),
@@ -581,7 +581,7 @@ function App() {
       setNotice(`Tag "${text}" added.`);
     }
     setTagText("");
-    setTagColor("#39749a");
+    setTagColor("#536bea");
     setEditingTagId(null);
   }
 
@@ -670,7 +670,7 @@ function App() {
     if (editingTagId === tagId) {
       setEditingTagId(null);
       setTagText("");
-      setTagColor("#39749a");
+      setTagColor("#536bea");
     }
     setNotice(`Tag "${removedTagText}" and its todo assignments were removed.`);
     setDeleteConfirmation(null);
@@ -1012,7 +1012,7 @@ function App() {
                   type="button"
                   onClick={() => {
                     setTagText("");
-                    setTagColor("#39749a");
+                    setTagColor("#536bea");
                     setEditingTagId(null);
                     setIsTagDialogOpen(true);
                   }}
@@ -1592,7 +1592,7 @@ function App() {
                     onClick={() => {
                       setEditingTagId(null);
                       setTagText("");
-                      setTagColor("#39749a");
+                      setTagColor("#536bea");
                     }}
                   >
                     Cancel edit
