@@ -53,8 +53,33 @@ type BackupFile = {
 const STORAGE_KEY = "knowledge-base-todos";
 const SORT_STORAGE_KEY = "knowledge-base-todo-sort";
 const TAGS_STORAGE_KEY = "knowledge-base-todo-tags";
+const COLLAPSE_STORAGE_KEY = "knowledge-base-todo-collapse";
+const SEARCH_STORAGE_KEY = "knowledge-base-todo-search";
 const DEFAULT_TREE_LINE_COLOR = "#7b87e8";
 const PREVIOUS_DEFAULT_TREE_LINE_COLORS = new Set(["#829b8a", "#7598b2"]);
+
+type TodoCollapseState = {
+  collapsedTodoIds: Set<string>;
+  collapseAllActive: boolean;
+};
+
+type StoredTodoCollapseState = {
+  collapsedTodoIds: string[];
+  collapseAllActive: boolean;
+};
+
+function isStoredTodoCollapseState(
+  value: unknown,
+): value is StoredTodoCollapseState {
+  if (typeof value !== "object" || value === null) return false;
+
+  const state = value as Partial<StoredTodoCollapseState>;
+  return (
+    Array.isArray(state.collapsedTodoIds) &&
+    state.collapsedTodoIds.every((todoId) => typeof todoId === "string") &&
+    typeof state.collapseAllActive === "boolean"
+  );
+}
 
 function isTodo(value: unknown): value is Todo {
   if (typeof value !== "object" || value === null) return false;
@@ -135,6 +160,31 @@ function readTodoTags(): TodoTag[] {
   }
 }
 
+function readTodoCollapseState(): TodoCollapseState {
+  try {
+    const stored = localStorage.getItem(COLLAPSE_STORAGE_KEY);
+    if (!stored) return { collapsedTodoIds: new Set(), collapseAllActive: false };
+
+    const parsed: unknown = JSON.parse(stored);
+    return isStoredTodoCollapseState(parsed)
+      ? {
+          collapsedTodoIds: new Set(parsed.collapsedTodoIds),
+          collapseAllActive: parsed.collapseAllActive,
+        }
+      : { collapsedTodoIds: new Set(), collapseAllActive: false };
+  } catch {
+    return { collapsedTodoIds: new Set(), collapseAllActive: false };
+  }
+}
+
+function readSearchText(): string {
+  try {
+    return localStorage.getItem(SEARCH_STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 function makeId() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 }
@@ -167,18 +217,18 @@ function App() {
     () => new Set(),
   );
   const [showTodoActions, setShowTodoActions] = useState(true);
-  const [collapsedTodoIds, setCollapsedTodoIds] = useState<Set<string>>(
-    () => new Set(),
+  const [todoCollapseState, setTodoCollapseState] = useState(
+    readTodoCollapseState,
   );
-  const [collapseAllActive, setCollapseAllActive] = useState(false);
+  const { collapsedTodoIds, collapseAllActive } = todoCollapseState;
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState(readSearchText);
   const [searchMatchIndex, setSearchMatchIndex] = useState(0);
   const [sortOrder, setSortOrder] = useState(() => {
     try {
-      return localStorage.getItem(SORT_STORAGE_KEY) || "newest";
+      return localStorage.getItem(SORT_STORAGE_KEY) || "manual";
     } catch {
-      return "newest";
+      return "manual";
     }
   });
   const [notice, setNotice] = useState("");
@@ -203,10 +253,21 @@ function App() {
     } catch {
       storageError = "Your browser could not save tags.";
     }
+    try {
+      localStorage.setItem(
+        COLLAPSE_STORAGE_KEY,
+        JSON.stringify({
+          collapsedTodoIds: [...todoCollapseState.collapsedTodoIds],
+          collapseAllActive: todoCollapseState.collapseAllActive,
+        }),
+      );
+    } catch {
+      storageError = "Your browser could not save the collapse state.";
+    }
     if (storageError) {
       setNotice(`${storageError} Check available storage.`);
     }
-  }, [todos, tags]);
+  }, [todos, tags, todoCollapseState]);
 
   useEffect(() => {
     try {
@@ -722,11 +783,11 @@ function App() {
   }
 
   function toggleTodoCollapsed(todoId: string) {
-    setCollapsedTodoIds((currentIds) => {
-      const nextIds = new Set(currentIds);
+    setTodoCollapseState((currentState) => {
+      const nextIds = new Set(currentState.collapsedTodoIds);
       if (nextIds.has(todoId)) nextIds.delete(todoId);
       else nextIds.add(todoId);
-      return nextIds;
+      return { ...currentState, collapsedTodoIds: nextIds };
     });
   }
 
@@ -734,12 +795,14 @@ function App() {
     return nodes.map((todo) => {
       const hasChildren = todo.children.length > 0;
       const isCollapsed =
-        selectedTagFilterIds.size === 0 &&
         collapsedTodoIds.has(todo.id) &&
         (collapseAllActive || !searchExpandedTodoIds.has(todo.id));
 
       return (
-        <div className="todo-node" key={todo.id}>
+        <div
+          className={`todo-node${depth === 0 ? " todo-node-top-level" : ""}`}
+          key={todo.id}
+        >
           <div
             data-todo-id={todo.id}
             className={`todo-row${showTodoActions ? "" : " todo-row-actions-hidden"}${hasChildren ? " todo-row-has-children" : ""}`}
@@ -1094,12 +1157,12 @@ function App() {
                       }}
                     >
                       {[
+                        ["manual", "Manual order"],
                         ["newest", "Newest first"],
                         ["oldest", "Oldest first"],
                         ["title-asc", "Title A–Z"],
                         ["title-desc", "Title Z–A"],
                         ["status", "To do first"],
-                        ["manual", "Manual order"],
                       ].map(([value, label]) => (
                         <button
                           className="sort-menu-item"
@@ -1131,8 +1194,10 @@ function App() {
                   title="Collapse all todos"
                   disabled={parentTodoIds.length === 0}
                   onClick={() => {
-                    setCollapsedTodoIds(new Set(parentTodoIds));
-                    setCollapseAllActive(true);
+                    setTodoCollapseState({
+                      collapsedTodoIds: new Set(parentTodoIds),
+                      collapseAllActive: true,
+                    });
                   }}
                 >
                   <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -1146,8 +1211,10 @@ function App() {
                   title="Expand all todos"
                   disabled={parentTodoIds.length === 0}
                   onClick={() => {
-                    setCollapsedTodoIds(new Set());
-                    setCollapseAllActive(false);
+                    setTodoCollapseState({
+                      collapsedTodoIds: new Set(),
+                      collapseAllActive: false,
+                    });
                   }}
                 >
                   <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -1168,8 +1235,14 @@ function App() {
                 type="search"
                 value={searchText}
                 onChange={(event) => {
-                  setSearchText(event.target.value);
+                  const nextSearchText = event.target.value;
+                  setSearchText(nextSearchText);
                   setSearchMatchIndex(0);
+                  try {
+                    localStorage.setItem(SEARCH_STORAGE_KEY, nextSearchText);
+                  } catch {
+                    setNotice("Your browser could not save the search.");
+                  }
                 }}
                 onKeyDown={(event) => {
                   if (event.key !== "Enter" || matchingTodoIds.length === 0) {
