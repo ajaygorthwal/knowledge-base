@@ -1505,34 +1505,6 @@ function App() {
           </div>
           <div className="search-sort-tools">
             <div className="search-control-wrapper">
-            <button
-              className="reset-filter-button"
-              type="button"
-              onClick={() => {
-                setSearchText("");
-                setSearchMatchIndex(0);
-                setSelectedTagFilterIds(new Set());
-                setSortOrder("manual");
-                setTodoCollapseState({
-                  collapsedTodoIds: new Set(),
-                  collapseAllActive: false,
-                });
-                setShowTodoActions(false);
-                setIsSortMenuOpen(false);
-                try {
-                  localStorage.setItem(SEARCH_STORAGE_KEY, "");
-                } catch {
-                  setNotice("Your browser could not save the reset.");
-                }
-              }}
-              aria-label="Reset all filters and view settings"
-              title="Reset filters and view settings"
-            >
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="M4.2 6.1A7 7 0 1 1 3 10" />
-                <path d="M3 3v4h4" />
-              </svg>
-            </button>
             <label className="search-control">
               <svg viewBox="0 0 20 20" aria-hidden="true">
                 <circle cx="8.75" cy="8.75" r="5.75" />
@@ -1564,6 +1536,34 @@ function App() {
               />
             </label>
             </div>
+            <button
+              className="reset-filter-button"
+              type="button"
+              onClick={() => {
+                setSearchText("");
+                setSearchMatchIndex(0);
+                setSelectedTagFilterIds(new Set());
+                setSortOrder("manual");
+                setTodoCollapseState({
+                  collapsedTodoIds: new Set(),
+                  collapseAllActive: false,
+                });
+                setShowTodoActions(false);
+                setIsSortMenuOpen(false);
+                try {
+                  localStorage.setItem(SEARCH_STORAGE_KEY, "");
+                } catch {
+                  setNotice("Your browser could not save the reset.");
+                }
+              }}
+              aria-label="Reset all filters and view settings"
+              title="Reset filters and view settings"
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M4.2 6.1A7 7 0 1 1 3 10" />
+                <path d="M3 3v4h4" />
+              </svg>
+            </button>
             <button
               className="search-match-button"
               type="button"

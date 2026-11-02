@@ -265,21 +265,6 @@
   max-width: none;
 }
 
-.search-control-wrapper .reset-filter-button {
-  position: absolute;
-  top: 50%;
-  right: 5px;
-  z-index: 1;
-  width: 30px;
-  height: 30px;
-  transform: translateY(-50%);
-  border: 0;
-}
-
-.search-control-wrapper input {
-  padding-right: 34px;
-}
-
 .search-control {
   min-width: 130px;
   max-width: 260px;
@@ -1592,7 +1577,7 @@
     margin: 0;
     padding: 8px 12px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 44px 44px 44px;
+    grid-template-columns: minmax(0, 1fr) repeat(4, 44px);
     gap: 6px;
     background: rgba(255, 255, 255, 0.96);
     border-bottom: 1px solid #ececff;
@@ -1616,6 +1601,7 @@
 
   .search-sort-tools .search-control-wrapper {
     width: 100%;
+    min-width: 0;
     max-width: none;
   }
 
