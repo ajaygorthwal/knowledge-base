@@ -253,6 +253,33 @@
   gap: 6px;
 }
 
+.search-control-wrapper {
+  position: relative;
+  min-width: 130px;
+  max-width: 260px;
+  flex: 1;
+}
+
+.search-control-wrapper .search-control {
+  width: 100%;
+  max-width: none;
+}
+
+.search-control-wrapper .reset-filter-button {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  transform: translateY(-50%);
+  border: 0;
+}
+
+.search-control-wrapper input {
+  padding-right: 34px;
+}
+
 .search-control {
   min-width: 130px;
   max-width: 260px;
@@ -465,6 +492,7 @@
   stroke-linejoin: round;
 }
 
+.reset-filter-button,
 .search-match-button {
   width: 44px;
   height: 44px;
@@ -478,6 +506,7 @@
   cursor: pointer;
 }
 
+.reset-filter-button:hover,
 .search-match-button:hover:not(:disabled) {
   color: #536bea;
   background: #eff0ff;
@@ -489,11 +518,13 @@
   cursor: not-allowed;
 }
 
+.reset-filter-button:focus-visible,
 .search-match-button:focus-visible {
   outline: 3px solid rgba(83, 107, 234, 0.35);
   outline-offset: 2px;
 }
 
+.reset-filter-button svg,
 .search-match-button svg {
   width: 19px;
   height: 19px;
@@ -776,6 +807,7 @@
   text-underline-offset: 3px;
 }
 
+.view-description-button,
 .edit-todo-button {
   width: 32px;
   height: 32px;
@@ -788,11 +820,13 @@
   cursor: pointer;
 }
 
+.view-description-button:hover,
 .edit-todo-button:hover {
   color: #536bea;
   background: #eff0ff;
 }
 
+.view-description-button svg,
 .edit-todo-button svg {
   width: 18px;
   height: 18px;
@@ -886,6 +920,7 @@
 
 .add-subtodo-button:focus-visible,
 .move-todo-button:focus-visible,
+.view-description-button:focus-visible,
 .edit-todo-button:focus-visible,
 .dialog-close:focus-visible {
   outline: 3px solid rgba(83, 107, 234, 0.35);
@@ -1090,6 +1125,122 @@
   border-color: #a4b0f0;
   box-shadow: 0 0 0 3px rgba(83, 107, 234, 0.16);
 }
+
+.optional-label {
+  color: #9094a8;
+  font-weight: 500;
+}
+
+.todo-description-input {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  padding: 12px 13px;
+  color: #383d54;
+  background: #fcfcff;
+  border: 1px solid #e3e5f6;
+  border-radius: 9px;
+  outline: 0;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.todo-name-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 13px;
+  color: #383d54;
+  background: #fcfcff;
+  border: 1px solid #e3e5f6;
+  border-radius: 9px;
+  outline: 0;
+  font-size: 16px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.spellchecked-editor:empty::before {
+  color: #9295a7;
+  content: attr(data-placeholder);
+  pointer-events: none;
+}
+
+.spellcheck-misspelled {
+  text-decoration: underline wavy #d24a4a;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.spelling-context-menu {
+  position: fixed;
+  z-index: 30;
+  min-width: 160px;
+  padding: 6px;
+  display: grid;
+  background: #fff;
+  border: 1px solid #e3e5f6;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(39, 40, 69, 0.2);
+}
+
+.spelling-menu-label,
+.spelling-menu-empty {
+  padding: 5px 10px;
+  color: #85889d;
+  font-size: 11px;
+}
+
+.spelling-context-menu button {
+  padding: 8px 10px;
+  color: #3c4058;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spelling-context-menu button:hover {
+  background: #eff0ff;
+}
+
+.todo-description-input:focus,
+.todo-name-input:focus {
+  border-color: #a4b0f0;
+  box-shadow: 0 0 0 3px rgba(83, 107, 234, 0.16);
+}
+
+.spellcheck-message {
+  margin: 6px 0 0;
+  color: #a43f3f;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.description-dialog {
+  width: min(100%, 620px);
+  max-height: min(80vh, 720px);
+  overflow: hidden;
+}
+
+.todo-description-view {
+  max-height: 55vh;
+  margin-top: 22px;
+  overflow-y: auto;
+  color: #454960;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.todo-description-view > :first-child { margin-top: 0; }
+.todo-description-view > :last-child { margin-bottom: 0; }
+.todo-description-view pre { overflow-x: auto; padding: 12px; background: #f4f5fb; border-radius: 8px; }
+.todo-description-view code { color: #3f4bb2; }
+.todo-description-view a { color: #536bea; }
 
 .todo-tag-picker {
   min-width: 0;
@@ -1463,6 +1614,11 @@
     -webkit-backdrop-filter: blur(10px);
   }
 
+  .search-sort-tools .search-control-wrapper {
+    width: 100%;
+    max-width: none;
+  }
+
   .search-sort-tools .search-control {
     width: 100%;
     max-width: none;
@@ -1471,6 +1627,7 @@
 
   .search-sort-tools .sort-menu-container,
   .search-sort-tools .sort-menu-button,
+  .search-sort-tools .reset-filter-button,
   .search-sort-tools .search-match-button,
   .search-sort-tools .toggle-actions-button {
     width: 44px;
@@ -1563,6 +1720,7 @@
     height: 44px;
   }
 
+  .view-description-button,
   .edit-todo-button {
     width: 32px;
     height: 44px;
@@ -1626,6 +1784,7 @@
     width: 34px;
   }
 
+  .view-description-button,
   .edit-todo-button {
     width: 31px;
   }

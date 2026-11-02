@@ -6,13 +6,16 @@ import {
   type ChangeEvent,
   type CSSProperties,
   type FormEvent,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
+import nspell from "nspell";
 import "./App.css";
 
 type Todo = {
   id: string;
   text: string;
+  description?: string;
   completed: boolean;
   createdAt: string;
   parentId?: string | null;
@@ -88,6 +91,7 @@ function isTodo(value: unknown): value is Todo {
   return (
     typeof todo.id === "string" &&
     typeof todo.text === "string" &&
+    (todo.description === undefined || typeof todo.description === "string") &&
     typeof todo.completed === "boolean" &&
     typeof todo.createdAt === "string" &&
     (todo.parentId === undefined ||
@@ -198,10 +202,236 @@ function getTagTextColor(color: string): string {
   return luminance > 0.62 ? "#243c50" : "#ffffff";
 }
 
+function renderMarkdown(markdown: string): ReactNode[] {
+  const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
+  const rendered: ReactNode[] = [];
+  let paragraph: string[] = [];
+  let i = 0;
+
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    rendered.push(<p key={`p-${rendered.length}`}>{renderInlineMarkdown(paragraph.join("\n"))}</p>);
+    paragraph = [];
+  };
+
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.trim()) {
+      flushParagraph();
+      i += 1;
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      const level = heading[1].length;
+      const headingContent = renderInlineMarkdown(heading[2]);
+      if (level === 1) rendered.push(<h1 key={`heading-${rendered.length}`}>{headingContent}</h1>);
+      else if (level === 2) rendered.push(<h2 key={`heading-${rendered.length}`}>{headingContent}</h2>);
+      else if (level === 3) rendered.push(<h3 key={`heading-${rendered.length}`}>{headingContent}</h3>);
+      else if (level === 4) rendered.push(<h4 key={`heading-${rendered.length}`}>{headingContent}</h4>);
+      else if (level === 5) rendered.push(<h5 key={`heading-${rendered.length}`}>{headingContent}</h5>);
+      else rendered.push(<h6 key={`heading-${rendered.length}`}>{headingContent}</h6>);
+      i += 1;
+      continue;
+    }
+
+    if (line.trim().startsWith("```")) {
+      flushParagraph();
+      const code: string[] = [];
+      i += 1;
+      while (i < lines.length && !lines[i].trim().startsWith("```")) {
+        code.push(lines[i]);
+        i += 1;
+      }
+      rendered.push(<pre key={`code-${rendered.length}`}><code>{code.join("\n")}</code></pre>);
+      i += 1;
+      continue;
+    }
+
+    const listItem = line.match(/^\s*[-*+]\s+(.+)$/);
+    if (listItem) {
+      flushParagraph();
+      const items: string[] = [];
+      while (i < lines.length) {
+        const item = lines[i].match(/^\s*[-*+]\s+(.+)$/);
+        if (!item) break;
+        items.push(item[1]);
+        i += 1;
+      }
+      rendered.push(<ul key={`list-${rendered.length}`}>{items.map((item, index) => <li key={index}>{renderInlineMarkdown(item)}</li>)}</ul>);
+      continue;
+    }
+
+    paragraph.push(line);
+    i += 1;
+  }
+  flushParagraph();
+  return rendered;
+}
+
+function renderInlineMarkdown(text: string): ReactNode[] {
+  const tokens = text.split(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g);
+  return tokens.map((token, index) => {
+    if (token.startsWith("`") && token.endsWith("`")) return <code key={index}>{token.slice(1, -1)}</code>;
+    if (token.startsWith("**") && token.endsWith("**")) return <strong key={index}>{token.slice(2, -2)}</strong>;
+    if (token.startsWith("*") && token.endsWith("*")) return <em key={index}>{token.slice(1, -1)}</em>;
+    const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (link) return <a key={index} href={link[2]} target="_blank" rel="noreferrer">{link[1]}</a>;
+    return token;
+  });
+}
+
+function SpellCheckedEditor({
+  id,
+  value,
+  onChange,
+  multiline = false,
+  spellChecker,
+  onContextMenuWord,
+  onTypingWord,
+  editorRef: providedEditorRef,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  multiline?: boolean;
+  spellChecker: ReturnType<typeof nspell> | null;
+  onContextMenuWord: (word: string, event: ReactMouseEvent) => void;
+  onTypingWord: (word: string, x: number, y: number) => void;
+  editorRef?: React.RefObject<HTMLDivElement | null>;
+}) {
+  const internalEditorRef = useRef<HTMLDivElement>(null);
+  const editorRef = providedEditorRef ?? internalEditorRef;
+
+  function renderText() {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const selection = window.getSelection();
+    let start = 0;
+    if (selection?.anchorNode && editor.contains(selection.anchorNode)) {
+      const range = selection.getRangeAt(0);
+      const before = range.cloneRange();
+      before.selectNodeContents(editor);
+      before.setEnd(range.startContainer, range.startOffset);
+      start = before.toString().length;
+    }
+
+    editor.replaceChildren();
+    const lines = editor.ownerDocument.createTextNode(value);
+    editor.append(lines);
+
+    if (!spellChecker || !value) return;
+    const textNodes: Text[] = [];
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+
+    const misspelled = new Map<string, boolean>();
+    for (const node of textNodes) {
+      const text = node.data;
+      const fragment = document.createDocumentFragment();
+      const pattern = /[A-Za-z]+(?:['’][A-Za-z]+)?/g;
+      let cursor = 0;
+      let match: RegExpExecArray | null;
+      while ((match = pattern.exec(text)) !== null) {
+        fragment.append(document.createTextNode(text.slice(cursor, match.index)));
+        const word = match[0];
+        let incorrect = misspelled.get(word.toLocaleLowerCase());
+        if (incorrect === undefined) {
+          incorrect = word.length > 1 && !spellChecker.correct(word);
+          misspelled.set(word.toLocaleLowerCase(), incorrect);
+        }
+        if (incorrect) {
+          const span = document.createElement("span");
+          span.className = "spellcheck-misspelled";
+          span.dataset.word = word;
+          span.textContent = word;
+          fragment.append(span);
+        } else fragment.append(document.createTextNode(word));
+        cursor = match.index + word.length;
+      }
+      fragment.append(document.createTextNode(text.slice(cursor)));
+      node.replaceWith(fragment);
+    }
+
+    if (document.activeElement === editor && start >= 0) {
+      const range = document.createRange();
+      let remaining = start;
+      const nodes = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+      let node: Node | null = nodes.nextNode();
+      while (node) {
+        const length = node.textContent?.length ?? 0;
+        if (remaining <= length) {
+          range.setStart(node, remaining);
+          range.collapse(true);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+          break;
+        }
+        remaining -= length;
+        node = nodes.nextNode();
+      }
+    }
+  }
+
+  useLayoutEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    if (editor.textContent !== value && document.activeElement !== editor) {
+      editor.textContent = value;
+    }
+    renderText();
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, spellChecker, editorRef, renderText]);
+
+
+  return (
+    <div
+      ref={editorRef}
+      id={id}
+      className={multiline ? "todo-description-input spellchecked-editor" : "todo-name-input spellchecked-editor"}
+      role="textbox"
+      aria-multiline={multiline}
+      contentEditable
+      suppressContentEditableWarning
+      spellCheck={false}
+      data-placeholder={multiline ? "Add notes or Markdown details..." : "What would you like to get done?"}
+      onInput={(event) => {
+        const text = event.currentTarget.textContent ?? "";
+        onChange(text);
+        const selection = window.getSelection();
+        if (!selection?.anchorNode || !selection.anchorNode.parentElement) return;
+        const range = selection.getRangeAt(0);
+        const beforeCaret = range.cloneRange();
+        beforeCaret.selectNodeContents(event.currentTarget);
+        beforeCaret.setEnd(range.startContainer, range.startOffset);
+        const offset = beforeCaret.toString().length;
+        const wordMatch = text.slice(0, offset).match(/[A-Za-z]+(?:['’][A-Za-z]+)?$/);
+        if (!wordMatch) return;
+        const word = wordMatch[0];
+        const caretRect = range.getBoundingClientRect();
+        onTypingWord(word, caretRect.left, caretRect.bottom + 4);
+      }}
+      onContextMenu={(event) => {
+        const target = event.target instanceof HTMLElement ? event.target.closest<HTMLElement>(".spellcheck-misspelled") : null;
+        if (!target) return;
+        event.preventDefault();
+        onContextMenuWord(target.dataset.word ?? target.textContent ?? "", event);
+      }}
+    />
+  );
+}
+
 function App() {
   const [todos, setTodos] = useState<Todo[]>(readTodos);
   const [tags, setTags] = useState<TodoTag[]>(readTodoTags);
   const [todoText, setTodoText] = useState("");
+  const [todoDescription, setTodoDescription] = useState("");
+  const [spellingMenu, setSpellingMenu] = useState<{ word: string; suggestions: string[]; field: "name" | "description"; x: number; y: number } | null>(null);
+  const [spellChecker, setSpellChecker] = useState<ReturnType<typeof nspell> | null>(null);
+  const [descriptionTodo, setDescriptionTodo] = useState<Todo | null>(null);
   const [treeLineColor, setTreeLineColor] = useState(
     DEFAULT_TREE_LINE_COLOR,
   );
@@ -216,7 +446,7 @@ function App() {
   const [selectedTagFilterIds, setSelectedTagFilterIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [showTodoActions, setShowTodoActions] = useState(true);
+  const [showTodoActions, setShowTodoActions] = useState(false);
   const [todoCollapseState, setTodoCollapseState] = useState(
     readTodoCollapseState,
   );
@@ -233,13 +463,32 @@ function App() {
   });
   const [notice, setNotice] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const todoInputRef = useRef<HTMLInputElement>(null);
+  const todoInputRef = useRef<HTMLDivElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const deleteCancelButtonRef = useRef<HTMLButtonElement>(null);
   const deleteDialogRef = useRef<HTMLElement>(null);
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const sortButtonRef = useRef<HTMLButtonElement>(null);
   const previousRowPositionsRef = useRef<Map<string, DOMRect> | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetch(`${import.meta.env.BASE_URL}dictionaries/en.aff`).then((response) => {
+        if (!response.ok) throw new Error("Could not load the spelling dictionary.");
+        return response.text();
+      }),
+      fetch(`${import.meta.env.BASE_URL}dictionaries/en.dic`).then((response) => {
+        if (!response.ok) throw new Error("Could not load the spelling dictionary.");
+        return response.text();
+      }),
+    ]).then(([aff, dic]) => {
+      if (active) setSpellChecker(nspell({ aff, dic }));
+    }).catch((error: unknown) => {
+      if (active) setNotice(error instanceof Error ? error.message : "Could not load spell checking.");
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let storageError = "";
@@ -348,18 +597,29 @@ function App() {
   }, [todos]);
 
   useEffect(() => {
-    if (deleteConfirmation || (!todoDialog && !isTagDialogOpen)) return;
+    if (deleteConfirmation || (!todoDialog && !isTagDialogOpen && !descriptionTodo)) return;
     if (todoDialog) todoInputRef.current?.focus();
     if (isTagDialogOpen) tagInputRef.current?.focus();
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         if (isTagDialogOpen) setIsTagDialogOpen(false);
+        else if (descriptionTodo) setDescriptionTodo(null);
         else closeTodoDialog();
       }
     }
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [todoDialog, isTagDialogOpen, deleteConfirmation]);
+  }, [todoDialog, isTagDialogOpen, deleteConfirmation, descriptionTodo]);
+
+  useEffect(() => {
+    if (!spellingMenu) return;
+    const closeMenu = (event: PointerEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target?.closest(".spelling-context-menu")) setSpellingMenu(null);
+    };
+    window.addEventListener("pointerdown", closeMenu);
+    return () => window.removeEventListener("pointerdown", closeMenu);
+  }, [spellingMenu]);
 
   useEffect(() => {
     if (!isSortMenuOpen) return;
@@ -541,6 +801,7 @@ function App() {
 
   function openAddDialog(parentId: string | null = null) {
     setTodoText("");
+    setTodoDescription("");
     setTreeLineColor(DEFAULT_TREE_LINE_COLOR);
     setSelectedTagIds([]);
     setTodoDialog({ mode: "add", parentId });
@@ -549,6 +810,7 @@ function App() {
 
   function openEditDialog(todo: Todo) {
     setTodoText(todo.text);
+    setTodoDescription(todo.description ?? "");
     setTreeLineColor(todo.treeLineColor ?? DEFAULT_TREE_LINE_COLOR);
     setSelectedTagIds(todo.tagIds ?? []);
     setTodoDialog({ mode: "edit", todoId: todo.id });
@@ -558,13 +820,15 @@ function App() {
   function closeTodoDialog() {
     setTodoDialog(null);
     setTodoText("");
+    setTodoDescription("");
     setTreeLineColor(DEFAULT_TREE_LINE_COLOR);
     setSelectedTagIds([]);
   }
 
   function saveTodo(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const text = todoInputRef.current?.value.trim() ?? "";
+    const text = todoText.trim();
+    const description = todoDescription.trim() ? todoDescription.replace(/\r\n?/g, "\n") : "";
     if (!text || !todoDialog) return;
 
     if (todoDialog.mode === "edit") {
@@ -574,6 +838,7 @@ function App() {
             ? {
                 ...todo,
                 text,
+                description,
                 tagIds: selectedTagIds,
                 treeLineColor: treeLineColor.toUpperCase(),
               }
@@ -585,6 +850,7 @@ function App() {
       const newTodo: Todo = {
         id: makeId(),
         text,
+        description,
         completed: false,
         createdAt: new Date().toISOString(),
         parentId: todoDialog.parentId,
@@ -889,6 +1155,19 @@ function App() {
                     <path d="M10 4v12M4 10h12" />
                   </svg>
                 </button>
+                {todo.description?.trim() && (
+                  <button
+                    className="view-description-button"
+                    type="button"
+                    onClick={() => setDescriptionTodo(todo)}
+                    aria-label={`View description for ${todo.text}`}
+                    title="View description"
+                  >
+                    <svg viewBox="0 0 20 20" aria-hidden="true">
+                      <path d="M4 3.5h12v13H4zM7 7h6M7 10h6M7 13h4" />
+                    </svg>
+                  </button>
+                )}
                 <button
                   className="edit-todo-button"
                   type="button"
@@ -1225,6 +1504,35 @@ function App() {
             </div>
           </div>
           <div className="search-sort-tools">
+            <div className="search-control-wrapper">
+            <button
+              className="reset-filter-button"
+              type="button"
+              onClick={() => {
+                setSearchText("");
+                setSearchMatchIndex(0);
+                setSelectedTagFilterIds(new Set());
+                setSortOrder("manual");
+                setTodoCollapseState({
+                  collapsedTodoIds: new Set(),
+                  collapseAllActive: false,
+                });
+                setShowTodoActions(false);
+                setIsSortMenuOpen(false);
+                try {
+                  localStorage.setItem(SEARCH_STORAGE_KEY, "");
+                } catch {
+                  setNotice("Your browser could not save the reset.");
+                }
+              }}
+              aria-label="Reset all filters and view settings"
+              title="Reset filters and view settings"
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M4.2 6.1A7 7 0 1 1 3 10" />
+                <path d="M3 3v4h4" />
+              </svg>
+            </button>
             <label className="search-control">
               <svg viewBox="0 0 20 20" aria-hidden="true">
                 <circle cx="8.75" cy="8.75" r="5.75" />
@@ -1255,6 +1563,7 @@ function App() {
                 aria-label="Search todos"
               />
             </label>
+            </div>
             <button
               className="search-match-button"
               type="button"
@@ -1441,14 +1750,32 @@ function App() {
             )}
             <form className="dialog-form" onSubmit={saveTodo}>
               <label htmlFor="todo-name">Todo name</label>
-              <input
-                ref={todoInputRef}
+              <SpellCheckedEditor
                 id="todo-name"
-                type="text"
-                defaultValue={todoText}
-                placeholder="What would you like to get done?"
-                maxLength={240}
-                required
+                value={todoText}
+                onChange={setTodoText}
+                spellChecker={spellChecker}
+                editorRef={todoInputRef}
+                onTypingWord={(word, x, y) => {
+                  if (!spellChecker || word.length < 3 || spellChecker.correct(word)) setSpellingMenu(null);
+                  else setSpellingMenu({ word, suggestions: spellChecker.suggest(word).slice(0, 6), field: "name", x, y });
+                }}
+                onContextMenuWord={(word, event) => setSpellingMenu({ word, suggestions: spellChecker?.suggest(word) ?? [], field: "name", x: event.clientX, y: event.clientY })}
+              />
+              <label htmlFor="todo-description">
+                Description <span className="optional-label">(optional)</span>
+              </label>
+              <SpellCheckedEditor
+                id="todo-description"
+                value={todoDescription}
+                onChange={setTodoDescription}
+                multiline
+                spellChecker={spellChecker}
+                onTypingWord={(word, x, y) => {
+                  if (!spellChecker || word.length < 3 || spellChecker.correct(word)) setSpellingMenu(null);
+                  else setSpellingMenu({ word, suggestions: spellChecker.suggest(word).slice(0, 6), field: "description", x, y });
+                }}
+                onContextMenuWord={(word, event) => setSpellingMenu({ word, suggestions: spellChecker?.suggest(word) ?? [], field: "description", x: event.clientX, y: event.clientY })}
               />
               <div className="tree-line-color-control">
                 <label htmlFor="todo-tree-line-color">
@@ -1518,6 +1845,80 @@ function App() {
               </div>
             </form>
           </section>
+        </div>
+      )}
+
+      {descriptionTodo && (
+        <div
+          className="dialog-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setDescriptionTodo(null);
+          }}
+        >
+          <section
+            className="add-dialog description-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="description-dialog-title"
+          >
+            <div className="dialog-heading">
+              <div>
+                <p className="dialog-eyebrow">TODO DESCRIPTION</p>
+                <h2 id="description-dialog-title">{descriptionTodo.text}</h2>
+              </div>
+              <button
+                className="dialog-close"
+                type="button"
+                onClick={() => setDescriptionTodo(null)}
+                aria-label="Close description"
+              >
+                ×
+              </button>
+            </div>
+            <div className="todo-description-view">
+              {renderMarkdown(descriptionTodo.description ?? "")}
+            </div>
+            <div className="dialog-actions">
+              <button
+                className="button button-primary"
+                type="button"
+                onClick={() => setDescriptionTodo(null)}
+              >
+                Close
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {spellingMenu && spellChecker && (
+        <div
+          className="spelling-context-menu"
+          role="menu"
+          style={{ left: spellingMenu.x, top: spellingMenu.y } as CSSProperties}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <span className="spelling-menu-label">Suggestions</span>
+          {spellingMenu.suggestions.slice(0, 6).map((suggestion) => (
+            <button
+              type="button"
+              role="menuitem"
+              key={suggestion}
+              onClick={() => {
+                const escapedWord = spellingMenu.word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                const pattern = new RegExp(`\\b${escapedWord}\\b`, "i");
+                if (spellingMenu.field === "name") {
+                  setTodoText((current) => pattern.test(current) ? current.replace(pattern, suggestion) : current);
+                } else {
+                  setTodoDescription((current) => pattern.test(current) ? current.replace(pattern, suggestion) : current);
+                }
+                setSpellingMenu(null);
+              }}
+            >
+              {suggestion}
+            </button>
+          ))}
+          {spellingMenu.suggestions.length === 0 && <span className="spelling-menu-empty">No suggestions</span>}
         </div>
       )}
 
