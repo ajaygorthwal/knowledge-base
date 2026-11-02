@@ -447,6 +447,7 @@ function App() {
     () => new Set(),
   );
   const [showTodoActions, setShowTodoActions] = useState(false);
+  const [todoActionsMenu, setTodoActionsMenu] = useState<{ id: string; left: number; top: number; opensUp: boolean } | null>(null);
   const [todoCollapseState, setTodoCollapseState] = useState(
     readTodoCollapseState,
   );
@@ -620,6 +621,25 @@ function App() {
     window.addEventListener("pointerdown", closeMenu);
     return () => window.removeEventListener("pointerdown", closeMenu);
   }, [spellingMenu]);
+
+  useEffect(() => {
+    if (!todoActionsMenu) return;
+
+    function closeTodoActionsMenu(event: PointerEvent) {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target?.closest(".todo-actions-menu")) setTodoActionsMenu(null);
+    }
+    function closeTodoActionsMenuOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setTodoActionsMenu(null);
+    }
+
+    document.addEventListener("pointerdown", closeTodoActionsMenu);
+    window.addEventListener("keydown", closeTodoActionsMenuOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeTodoActionsMenu);
+      window.removeEventListener("keydown", closeTodoActionsMenuOnEscape);
+    };
+  }, [todoActionsMenu]);
 
   useEffect(() => {
     if (!isSortMenuOpen) return;
@@ -1121,30 +1141,6 @@ function App() {
             <div className="row-actions-cell" hidden={!showTodoActions}>
               <div className="row-actions">
                 <button
-                  className="move-todo-button"
-                  type="button"
-                  onClick={() => moveTodo(todo.id, -1)}
-                  disabled={getSiblingTodos(todo.parentId)[0]?.id === todo.id}
-                  aria-label={`Move ${todo.text} up`}
-                  title="Move up"
-                >
-                  <svg viewBox="0 0 20 20" aria-hidden="true">
-                    <path d="m5 12 5-5 5 5" />
-                  </svg>
-                </button>
-                <button
-                  className="move-todo-button"
-                  type="button"
-                  onClick={() => moveTodo(todo.id, 1)}
-                  disabled={getSiblingTodos(todo.parentId).at(-1)?.id === todo.id}
-                  aria-label={`Move ${todo.text} down`}
-                  title="Move down"
-                >
-                  <svg viewBox="0 0 20 20" aria-hidden="true">
-                    <path d="m5 8 5 5 5-5" />
-                  </svg>
-                </button>
-                <button
                   className="add-subtodo-button"
                   type="button"
                   onClick={() => openAddDialog(todo.id)}
@@ -1179,17 +1175,83 @@ function App() {
                     <path d="m12.5 4.5 3 3M4 16l3.5-.7L16 6.8 13.2 4 4.7 12.5 4 16Z" />
                   </svg>
                 </button>
-                <button
-                  className="delete-button"
-                  type="button"
-                  onClick={() => requestTodoDeletion(todo.id)}
-                  aria-label={`Delete todo: ${todo.text}`}
-                  title="Delete todo and its subtodos"
-                >
-                  <svg viewBox="0 0 20 20" aria-hidden="true">
-                    <path d="M4.5 6h11m-9.5 0 .6 10h5.8l.6-10M8 6V4h4v2m-3 3v4m2-4v4" />
-                  </svg>
-                </button>
+                <div className="todo-actions-menu">
+                  <button
+                    className="todo-actions-menu-button"
+                    type="button"
+                    onClick={(event) => {
+                      const buttonRect = event.currentTarget.getBoundingClientRect();
+                      if (todoActionsMenu?.id === todo.id) {
+                        setTodoActionsMenu(null);
+                        return;
+                      }
+                      setTodoActionsMenu({
+                        id: todo.id,
+                        left: Math.max(8, buttonRect.right - 150),
+                        top: buttonRect.bottom + 112 > window.innerHeight ? buttonRect.top - 4 : buttonRect.bottom + 4,
+                        opensUp: buttonRect.bottom + 112 > window.innerHeight,
+                      });
+                    }}
+                    aria-expanded={todoActionsMenu?.id === todo.id}
+                    aria-haspopup="menu"
+                    aria-label={`More actions for ${todo.text}`}
+                    title="More actions"
+                  >
+                    <svg viewBox="0 0 20 20" aria-hidden="true">
+                      <circle cx="4" cy="10" r="1.3" />
+                      <circle cx="10" cy="10" r="1.3" />
+                      <circle cx="16" cy="10" r="1.3" />
+                    </svg>
+                  </button>
+                  {todoActionsMenu?.id === todo.id && (
+                    <div
+                      className="todo-actions-dropdown"
+                      role="menu"
+                      style={{
+                        left: todoActionsMenu.left,
+                        top: todoActionsMenu.top,
+                        transform: todoActionsMenu.opensUp ? "translateY(-100%)" : undefined,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={getSiblingTodos(todo.parentId)[0]?.id === todo.id}
+                        onClick={() => {
+                          setTodoActionsMenu(null);
+                          moveTodo(todo.id, -1);
+                        }}
+                      >
+                        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 12 5-5 5 5" /></svg>
+                        Move up
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={getSiblingTodos(todo.parentId).at(-1)?.id === todo.id}
+                        onClick={() => {
+                          setTodoActionsMenu(null);
+                          moveTodo(todo.id, 1);
+                        }}
+                      >
+                        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 8 5 5 5-5" /></svg>
+                        Move down
+                      </button>
+                      <button
+                        className="todo-actions-dropdown-delete"
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setTodoActionsMenu(null);
+                          requestTodoDeletion(todo.id);
+                        }}
+                      >
+                        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 6h11m-9.5 0 .6 10h5.8l.6-10M8 6V4h4v2m-3 3v4m2-4v4" /></svg>
+                        Delete todo
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1366,6 +1428,34 @@ function App() {
                     <circle cx="7" cy="8" r="1" />
                   </svg>
                 </button>
+                <button
+                  className="reset-filter-button"
+                  type="button"
+                  onClick={() => {
+                    setSearchText("");
+                    setSearchMatchIndex(0);
+                    setSelectedTagFilterIds(new Set());
+                    setSortOrder("manual");
+                    setTodoCollapseState({
+                      collapsedTodoIds: new Set(),
+                      collapseAllActive: false,
+                    });
+                    setShowTodoActions(false);
+                    setIsSortMenuOpen(false);
+                    try {
+                      localStorage.setItem(SEARCH_STORAGE_KEY, "");
+                    } catch {
+                      setNotice("Your browser could not save the reset.");
+                    }
+                  }}
+                  aria-label="Reset all filters and view settings"
+                  title="Reset filters and view settings"
+                >
+                  <svg viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="M4.2 6.1A7 7 0 1 1 3 10" />
+                    <path d="M3 3v4h4" />
+                  </svg>
+                </button>
               </div>
               <div className="todo-toolbar-actions">
                 <div className="sort-menu-container" ref={sortMenuRef}>
@@ -1536,34 +1626,6 @@ function App() {
               />
             </label>
             </div>
-            <button
-              className="reset-filter-button"
-              type="button"
-              onClick={() => {
-                setSearchText("");
-                setSearchMatchIndex(0);
-                setSelectedTagFilterIds(new Set());
-                setSortOrder("manual");
-                setTodoCollapseState({
-                  collapsedTodoIds: new Set(),
-                  collapseAllActive: false,
-                });
-                setShowTodoActions(false);
-                setIsSortMenuOpen(false);
-                try {
-                  localStorage.setItem(SEARCH_STORAGE_KEY, "");
-                } catch {
-                  setNotice("Your browser could not save the reset.");
-                }
-              }}
-              aria-label="Reset all filters and view settings"
-              title="Reset filters and view settings"
-            >
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="M4.2 6.1A7 7 0 1 1 3 10" />
-                <path d="M3 3v4h4" />
-              </svg>
-            </button>
             <button
               className="search-match-button"
               type="button"

@@ -845,6 +845,89 @@
   gap: 4px;
 }
 
+.todo-actions-menu {
+  position: relative;
+}
+
+.todo-actions-menu-button {
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  color: #69708a;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.todo-actions-menu-button:hover,
+.todo-actions-menu-button[aria-expanded="true"] {
+  color: #536bea;
+  background: #eff0ff;
+}
+
+.todo-actions-menu-button svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.todo-actions-dropdown {
+  position: fixed;
+  z-index: 100;
+  right: auto;
+  width: 150px;
+  padding: 5px;
+  background: #fff;
+  border: 1px solid #dfe2f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(49, 53, 89, 0.16);
+}
+
+.todo-actions-dropdown button {
+  width: 100%;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
+  color: #4a4f68;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+
+.todo-actions-dropdown button:hover:not(:disabled) {
+  background: #f3f4ff;
+}
+
+.todo-actions-dropdown button:disabled {
+  color: #c9cbd8;
+  cursor: not-allowed;
+}
+
+.todo-actions-dropdown button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.todo-actions-dropdown .todo-actions-dropdown-delete {
+  color: #b04444;
+}
+
+.todo-actions-dropdown .todo-actions-dropdown-delete:hover {
+  background: #fff2f1;
+}
+
 .add-subtodo-button {
   width: 32px;
   height: 32px;
@@ -1577,7 +1660,7 @@
     margin: 0;
     padding: 8px 12px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) repeat(4, 44px);
+    grid-template-columns: minmax(0, 1fr) repeat(3, 44px);
     gap: 6px;
     background: rgba(255, 255, 255, 0.96);
     border-bottom: 1px solid #ececff;
