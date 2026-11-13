@@ -1230,62 +1230,16 @@
   overflow-wrap: anywhere;
 }
 
-.spellchecked-editor:empty::before {
+.todo-text-editor:empty::before {
   color: #9295a7;
   content: attr(data-placeholder);
   pointer-events: none;
-}
-
-.spellcheck-misspelled {
-  text-decoration: underline wavy #d24a4a;
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 3px;
-}
-
-.spelling-context-menu {
-  position: fixed;
-  z-index: 30;
-  min-width: 160px;
-  padding: 6px;
-  display: grid;
-  background: #fff;
-  border: 1px solid #e3e5f6;
-  border-radius: 10px;
-  box-shadow: 0 12px 32px rgba(39, 40, 69, 0.2);
-}
-
-.spelling-menu-label,
-.spelling-menu-empty {
-  padding: 5px 10px;
-  color: #85889d;
-  font-size: 11px;
-}
-
-.spelling-context-menu button {
-  padding: 8px 10px;
-  color: #3c4058;
-  background: transparent;
-  border: 0;
-  border-radius: 7px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.spelling-context-menu button:hover {
-  background: #eff0ff;
 }
 
 .todo-description-input:focus,
 .todo-name-input:focus {
   border-color: #a4b0f0;
   box-shadow: 0 0 0 3px rgba(83, 107, 234, 0.16);
-}
-
-.spellcheck-message {
-  margin: 6px 0 0;
-  color: #a43f3f;
-  font-size: 12px;
-  line-height: 1.4;
 }
 
 .description-dialog {

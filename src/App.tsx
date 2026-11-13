@@ -6,10 +6,8 @@ import {
   type ChangeEvent,
   type CSSProperties,
   type FormEvent,
-  type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
-import nspell from "nspell";
 import "./App.css";
 
 type Todo = {
@@ -283,98 +281,21 @@ function renderInlineMarkdown(text: string): ReactNode[] {
   });
 }
 
-function SpellCheckedEditor({
+function TodoTextEditor({
   id,
   value,
   onChange,
   multiline = false,
-  spellChecker,
-  onContextMenuWord,
-  onTypingWord,
   editorRef: providedEditorRef,
 }: {
   id: string;
   value: string;
   onChange: (value: string) => void;
   multiline?: boolean;
-  spellChecker: ReturnType<typeof nspell> | null;
-  onContextMenuWord: (word: string, event: ReactMouseEvent) => void;
-  onTypingWord: (word: string, x: number, y: number) => void;
   editorRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   const internalEditorRef = useRef<HTMLDivElement>(null);
   const editorRef = providedEditorRef ?? internalEditorRef;
-
-  function renderText() {
-    const editor = editorRef.current;
-    if (!editor) return;
-
-    const selection = window.getSelection();
-    let start = 0;
-    if (selection?.anchorNode && editor.contains(selection.anchorNode)) {
-      const range = selection.getRangeAt(0);
-      const before = range.cloneRange();
-      before.selectNodeContents(editor);
-      before.setEnd(range.startContainer, range.startOffset);
-      start = before.toString().length;
-    }
-
-    editor.replaceChildren();
-    const lines = editor.ownerDocument.createTextNode(value);
-    editor.append(lines);
-
-    if (!spellChecker || !value) return;
-    const textNodes: Text[] = [];
-    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
-    while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
-
-    const misspelled = new Map<string, boolean>();
-    for (const node of textNodes) {
-      const text = node.data;
-      const fragment = document.createDocumentFragment();
-      const pattern = /[A-Za-z]+(?:['’][A-Za-z]+)?/g;
-      let cursor = 0;
-      let match: RegExpExecArray | null;
-      while ((match = pattern.exec(text)) !== null) {
-        fragment.append(document.createTextNode(text.slice(cursor, match.index)));
-        const word = match[0];
-        let incorrect = misspelled.get(word.toLocaleLowerCase());
-        if (incorrect === undefined) {
-          incorrect = word.length > 1 && !spellChecker.correct(word);
-          misspelled.set(word.toLocaleLowerCase(), incorrect);
-        }
-        if (incorrect) {
-          const span = document.createElement("span");
-          span.className = "spellcheck-misspelled";
-          span.dataset.word = word;
-          span.textContent = word;
-          fragment.append(span);
-        } else fragment.append(document.createTextNode(word));
-        cursor = match.index + word.length;
-      }
-      fragment.append(document.createTextNode(text.slice(cursor)));
-      node.replaceWith(fragment);
-    }
-
-    if (document.activeElement === editor && start >= 0) {
-      const range = document.createRange();
-      let remaining = start;
-      const nodes = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
-      let node: Node | null = nodes.nextNode();
-      while (node) {
-        const length = node.textContent?.length ?? 0;
-        if (remaining <= length) {
-          range.setStart(node, remaining);
-          range.collapse(true);
-          selection?.removeAllRanges();
-          selection?.addRange(range);
-          break;
-        }
-        remaining -= length;
-        node = nodes.nextNode();
-      }
-    }
-  }
 
   useLayoutEffect(() => {
     const editor = editorRef.current;
@@ -382,16 +303,13 @@ function SpellCheckedEditor({
     if (editor.textContent !== value && document.activeElement !== editor) {
       editor.textContent = value;
     }
-    renderText();
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, spellChecker, editorRef, renderText]);
-
+  }, [value, editorRef]);
 
   return (
     <div
       ref={editorRef}
       id={id}
-      className={multiline ? "todo-description-input spellchecked-editor" : "todo-name-input spellchecked-editor"}
+      className={multiline ? "todo-description-input todo-text-editor" : "todo-name-input todo-text-editor"}
       role="textbox"
       aria-multiline={multiline}
       contentEditable
@@ -401,24 +319,6 @@ function SpellCheckedEditor({
       onInput={(event) => {
         const text = event.currentTarget.textContent ?? "";
         onChange(text);
-        const selection = window.getSelection();
-        if (!selection?.anchorNode || !selection.anchorNode.parentElement) return;
-        const range = selection.getRangeAt(0);
-        const beforeCaret = range.cloneRange();
-        beforeCaret.selectNodeContents(event.currentTarget);
-        beforeCaret.setEnd(range.startContainer, range.startOffset);
-        const offset = beforeCaret.toString().length;
-        const wordMatch = text.slice(0, offset).match(/[A-Za-z]+(?:['’][A-Za-z]+)?$/);
-        if (!wordMatch) return;
-        const word = wordMatch[0];
-        const caretRect = range.getBoundingClientRect();
-        onTypingWord(word, caretRect.left, caretRect.bottom + 4);
-      }}
-      onContextMenu={(event) => {
-        const target = event.target instanceof HTMLElement ? event.target.closest<HTMLElement>(".spellcheck-misspelled") : null;
-        if (!target) return;
-        event.preventDefault();
-        onContextMenuWord(target.dataset.word ?? target.textContent ?? "", event);
       }}
     />
   );
@@ -429,8 +329,6 @@ function App() {
   const [tags, setTags] = useState<TodoTag[]>(readTodoTags);
   const [todoText, setTodoText] = useState("");
   const [todoDescription, setTodoDescription] = useState("");
-  const [spellingMenu, setSpellingMenu] = useState<{ word: string; suggestions: string[]; field: "name" | "description"; x: number; y: number } | null>(null);
-  const [spellChecker, setSpellChecker] = useState<ReturnType<typeof nspell> | null>(null);
   const [descriptionTodo, setDescriptionTodo] = useState<Todo | null>(null);
   const [treeLineColor, setTreeLineColor] = useState(
     DEFAULT_TREE_LINE_COLOR,
@@ -471,25 +369,6 @@ function App() {
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const sortButtonRef = useRef<HTMLButtonElement>(null);
   const previousRowPositionsRef = useRef<Map<string, DOMRect> | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    Promise.all([
-      fetch(`${import.meta.env.BASE_URL}dictionaries/en.aff`).then((response) => {
-        if (!response.ok) throw new Error("Could not load the spelling dictionary.");
-        return response.text();
-      }),
-      fetch(`${import.meta.env.BASE_URL}dictionaries/en.dic`).then((response) => {
-        if (!response.ok) throw new Error("Could not load the spelling dictionary.");
-        return response.text();
-      }),
-    ]).then(([aff, dic]) => {
-      if (active) setSpellChecker(nspell({ aff, dic }));
-    }).catch((error: unknown) => {
-      if (active) setNotice(error instanceof Error ? error.message : "Could not load spell checking.");
-    });
-    return () => { active = false; };
-  }, []);
 
   useEffect(() => {
     let storageError = "";
@@ -611,16 +490,6 @@ function App() {
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [todoDialog, isTagDialogOpen, deleteConfirmation, descriptionTodo]);
-
-  useEffect(() => {
-    if (!spellingMenu) return;
-    const closeMenu = (event: PointerEvent) => {
-      const target = event.target instanceof Element ? event.target : null;
-      if (!target?.closest(".spelling-context-menu")) setSpellingMenu(null);
-    };
-    window.addEventListener("pointerdown", closeMenu);
-    return () => window.removeEventListener("pointerdown", closeMenu);
-  }, [spellingMenu]);
 
   useEffect(() => {
     if (!todoActionsMenu) return;
@@ -1812,32 +1681,20 @@ function App() {
             )}
             <form className="dialog-form" onSubmit={saveTodo}>
               <label htmlFor="todo-name">Todo name</label>
-              <SpellCheckedEditor
+              <TodoTextEditor
                 id="todo-name"
                 value={todoText}
                 onChange={setTodoText}
-                spellChecker={spellChecker}
                 editorRef={todoInputRef}
-                onTypingWord={(word, x, y) => {
-                  if (!spellChecker || word.length < 3 || spellChecker.correct(word)) setSpellingMenu(null);
-                  else setSpellingMenu({ word, suggestions: spellChecker.suggest(word).slice(0, 6), field: "name", x, y });
-                }}
-                onContextMenuWord={(word, event) => setSpellingMenu({ word, suggestions: spellChecker?.suggest(word) ?? [], field: "name", x: event.clientX, y: event.clientY })}
               />
               <label htmlFor="todo-description">
                 Description <span className="optional-label">(optional)</span>
               </label>
-              <SpellCheckedEditor
+              <TodoTextEditor
                 id="todo-description"
                 value={todoDescription}
                 onChange={setTodoDescription}
                 multiline
-                spellChecker={spellChecker}
-                onTypingWord={(word, x, y) => {
-                  if (!spellChecker || word.length < 3 || spellChecker.correct(word)) setSpellingMenu(null);
-                  else setSpellingMenu({ word, suggestions: spellChecker.suggest(word).slice(0, 6), field: "description", x, y });
-                }}
-                onContextMenuWord={(word, event) => setSpellingMenu({ word, suggestions: spellChecker?.suggest(word) ?? [], field: "description", x: event.clientX, y: event.clientY })}
               />
               <div className="tree-line-color-control">
                 <label htmlFor="todo-tree-line-color">
@@ -1950,37 +1807,6 @@ function App() {
               </button>
             </div>
           </section>
-        </div>
-      )}
-
-      {spellingMenu && spellChecker && (
-        <div
-          className="spelling-context-menu"
-          role="menu"
-          style={{ left: spellingMenu.x, top: spellingMenu.y } as CSSProperties}
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          <span className="spelling-menu-label">Suggestions</span>
-          {spellingMenu.suggestions.slice(0, 6).map((suggestion) => (
-            <button
-              type="button"
-              role="menuitem"
-              key={suggestion}
-              onClick={() => {
-                const escapedWord = spellingMenu.word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                const pattern = new RegExp(`\\b${escapedWord}\\b`, "i");
-                if (spellingMenu.field === "name") {
-                  setTodoText((current) => pattern.test(current) ? current.replace(pattern, suggestion) : current);
-                } else {
-                  setTodoDescription((current) => pattern.test(current) ? current.replace(pattern, suggestion) : current);
-                }
-                setSpellingMenu(null);
-              }}
-            >
-              {suggestion}
-            </button>
-          ))}
-          {spellingMenu.suggestions.length === 0 && <span className="spelling-menu-empty">No suggestions</span>}
         </div>
       )}
 
