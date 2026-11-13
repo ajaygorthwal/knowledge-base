@@ -386,6 +386,7 @@ function App() {
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [searchText, setSearchText] = useState(readSearchText);
   const [searchMatchIndex, setSearchMatchIndex] = useState(0);
+  const [searchScrollRequest, setSearchScrollRequest] = useState(0);
   const [sortOrder, setSortOrder] = useState(() => {
     try {
       return localStorage.getItem(SORT_STORAGE_KEY) || "manual";
@@ -402,7 +403,7 @@ function App() {
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const sortButtonRef = useRef<HTMLButtonElement>(null);
   const previousRowPositionsRef = useRef<Map<string, DOMRect> | null>(null);
-  const skipSearchAutoScrollRef = useRef(false);
+  const pendingSearchScrollRef = useRef(false);
 
   useEffect(() => {
     let storageError = "";
@@ -660,6 +661,8 @@ function App() {
 
   function navigateSearchMatch(direction: -1 | 1) {
     if (matchingTodoIds.length === 0) return;
+    pendingSearchScrollRef.current = true;
+    setSearchScrollRequest((request) => request + 1);
     setSearchMatchIndex(
       (currentIndex) =>
         (currentIndex + direction + matchingTodoIds.length) %
@@ -668,10 +671,8 @@ function App() {
   }
 
   useEffect(() => {
-    if (skipSearchAutoScrollRef.current) {
-      skipSearchAutoScrollRef.current = false;
-      return;
-    }
+    if (!pendingSearchScrollRef.current) return;
+    pendingSearchScrollRef.current = false;
     if (!activeMatchId) return;
     const matchingRow = Array.from(
       document.querySelectorAll<HTMLElement>("[data-todo-id]"),
@@ -686,6 +687,7 @@ function App() {
     activeMatchId,
     collapsedTodoIds,
     normalizedSearch,
+    searchScrollRequest,
     selectedTagFilterIds,
     todos,
   ]);
@@ -953,7 +955,6 @@ function App() {
         })
         .filter((entry): entry is readonly [string, DOMRect] => entry !== null),
     );
-    skipSearchAutoScrollRef.current = true;
     setTodos((currentTodos) =>
       currentTodos.map((todo) =>
         orderById.has(todo.id)
@@ -1513,6 +1514,8 @@ function App() {
                 value={searchText}
                 onChange={(event) => {
                   const nextSearchText = event.target.value;
+                  pendingSearchScrollRef.current = true;
+                  setSearchScrollRequest((request) => request + 1);
                   setSearchText(nextSearchText);
                   setSearchMatchIndex(0);
                   try {
