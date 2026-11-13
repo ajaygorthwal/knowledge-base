@@ -105,6 +105,39 @@ function isTodo(value: unknown): value is Todo {
   );
 }
 
+function isValidTodoCollection(value: unknown): value is Todo[] {
+  if (!Array.isArray(value) || !value.every(isTodo)) return false;
+
+  const todosById = new Map<string, Todo>();
+  for (const todo of value) {
+    if (!todo.id.trim() || !todo.text.trim() || todosById.has(todo.id)) {
+      return false;
+    }
+    todosById.set(todo.id, todo);
+  }
+
+  const completedIds = new Set<string>();
+  for (const todo of value) {
+    const path = new Set<string>();
+    let currentId: string | null | undefined = todo.id;
+    while (
+      currentId &&
+      todosById.has(currentId) &&
+      !completedIds.has(currentId)
+    ) {
+      if (path.has(currentId)) return false;
+      path.add(currentId);
+      const parentId: string | null | undefined =
+        todosById.get(currentId)?.parentId;
+      if (!parentId || !todosById.has(parentId)) break;
+      currentId = parentId;
+    }
+    for (const id of path) completedIds.add(id);
+  }
+
+  return true;
+}
+
 function migrateTodoTreeLineColor(todo: Todo): Todo {
   return PREVIOUS_DEFAULT_TREE_LINE_COLORS.has(todo.treeLineColor?.toLowerCase() ?? "")
     ? { ...todo, treeLineColor: DEFAULT_TREE_LINE_COLOR }
@@ -349,7 +382,7 @@ function App() {
   const [todoCollapseState, setTodoCollapseState] = useState(
     readTodoCollapseState,
   );
-  const { collapsedTodoIds, collapseAllActive } = todoCollapseState;
+  const { collapsedTodoIds } = todoCollapseState;
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [searchText, setSearchText] = useState(readSearchText);
   const [searchMatchIndex, setSearchMatchIndex] = useState(0);
@@ -951,7 +984,7 @@ function App() {
       const hasChildren = todo.children.length > 0;
       const isCollapsed =
         collapsedTodoIds.has(todo.id) &&
-        (collapseAllActive || !searchExpandedTodoIds.has(todo.id));
+        !searchExpandedTodoIds.has(todo.id);
 
       return (
         <div
@@ -1177,7 +1210,7 @@ function App() {
     );
     link.download = `kb_${filenameParts.day}_${filenameParts.month}_${filenameParts.hour}_${filenameParts.minute}_${filenameParts.dayPeriod}.json`;
     link.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     setNotice("Your todo backup has been downloaded.");
   }
 
@@ -1195,8 +1228,7 @@ function App() {
         !("version" in parsed) ||
         parsed.version !== 1 ||
         !("todos" in parsed) ||
-        !Array.isArray(parsed.todos) ||
-        !parsed.todos.every(isTodo) ||
+        !isValidTodoCollection(parsed.todos) ||
         ("tags" in parsed &&
           (!Array.isArray(parsed.tags) || !parsed.tags.every(isTodoTag)))
       ) {
