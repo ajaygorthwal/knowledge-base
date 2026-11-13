@@ -623,7 +623,7 @@
 .todo-list-header,
 .todo-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px;
+  grid-template-columns: minmax(0, 1fr) max-content;
   align-items: center;
   column-gap: 16px;
 }
@@ -1737,7 +1737,6 @@
 
   .todo-row {
     min-height: 42px;
-    grid-template-columns: minmax(0, 1fr) 174px;
     gap: 2px 8px;
     padding: 6px 10px;
   }
@@ -1758,7 +1757,7 @@
 
   .row-actions-cell {
     grid-column: 2;
-    text-align: center;
+    justify-self: end;
   }
 
   .todo-children-inner {
@@ -1840,7 +1839,6 @@
   }
 
   .todo-row:not(.todo-row-actions-hidden) {
-    grid-template-columns: minmax(0, 1fr) 160px;
     gap: 2px 5px;
     padding-inline: 8px;
   }
