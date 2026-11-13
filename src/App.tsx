@@ -402,6 +402,7 @@ function App() {
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const sortButtonRef = useRef<HTMLButtonElement>(null);
   const previousRowPositionsRef = useRef<Map<string, DOMRect> | null>(null);
+  const skipSearchAutoScrollRef = useRef(false);
 
   useEffect(() => {
     let storageError = "";
@@ -667,6 +668,10 @@ function App() {
   }
 
   useEffect(() => {
+    if (skipSearchAutoScrollRef.current) {
+      skipSearchAutoScrollRef.current = false;
+      return;
+    }
     if (!activeMatchId) return;
     const matchingRow = Array.from(
       document.querySelectorAll<HTMLElement>("[data-todo-id]"),
@@ -948,6 +953,7 @@ function App() {
         })
         .filter((entry): entry is readonly [string, DOMRect] => entry !== null),
     );
+    skipSearchAutoScrollRef.current = true;
     setTodos((currentTodos) =>
       currentTodos.map((todo) =>
         orderById.has(todo.id)
