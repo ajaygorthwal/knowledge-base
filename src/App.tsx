@@ -56,6 +56,7 @@ const SORT_STORAGE_KEY = "knowledge-base-todo-sort";
 const TAGS_STORAGE_KEY = "knowledge-base-todo-tags";
 const COLLAPSE_STORAGE_KEY = "knowledge-base-todo-collapse";
 const SEARCH_STORAGE_KEY = "knowledge-base-todo-search";
+const THEME_STORAGE_KEY = "knowledge-base-theme";
 const DEFAULT_TREE_LINE_COLOR = "#7b87e8";
 const PREVIOUS_DEFAULT_TREE_LINE_COLORS = new Set(["#829b8a", "#7598b2"]);
 
@@ -394,6 +395,13 @@ function App() {
       return "manual";
     }
   });
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    try {
+      return localStorage.getItem(THEME_STORAGE_KEY) === "dark";
+    } catch {
+      return false;
+    }
+  });
   const [notice, setNotice] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const todoInputRef = useRef<HTMLDivElement>(null);
@@ -440,6 +448,10 @@ function App() {
       // Sorting still works for this session when browser storage is unavailable.
     }
   }, [sortOrder]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = isDarkMode ? "dark" : "light";
+  }, [isDarkMode]);
 
   useEffect(() => {
     if (!deleteConfirmation) return;
@@ -1292,6 +1304,36 @@ function App() {
             </svg>
             <span>Upload data</span>
           </button>
+          <button
+            className="button button-secondary theme-toggle-button"
+            type="button"
+            aria-label={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+            title={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+            onClick={() => {
+              const nextDarkMode = !isDarkMode;
+              setIsDarkMode(nextDarkMode);
+              try {
+                localStorage.setItem(
+                  THEME_STORAGE_KEY,
+                  nextDarkMode ? "dark" : "light",
+                );
+              } catch {
+                setNotice("Your browser could not save the appearance setting.");
+              }
+            }}
+          >
+            {isDarkMode ? (
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="10" cy="10" r="3.5" />
+                <path d="M10 2v2m0 12v2M2 10h2m12 0h2M4.34 4.34l1.42 1.42m8.48 8.48 1.42 1.42m0-11.32-1.42 1.42m-8.48 8.48-1.42 1.42" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M16.7 12.4A7 7 0 0 1 7.6 3.3 7 7 0 1 0 16.7 12.4Z" />
+              </svg>
+            )}
+            <span>{isDarkMode ? "Light mode" : "Dark mode"}</span>
+          </button>
           <input
             ref={fileInputRef}
             className="visually-hidden"
@@ -1683,7 +1725,7 @@ function App() {
           }}
         >
           <section
-            className="add-dialog"
+            className="add-dialog todo-dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="todo-dialog-title"

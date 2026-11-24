@@ -1096,6 +1096,12 @@
   animation: dialog-enter 160ms ease-out;
 }
 
+.todo-dialog {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 @keyframes dialog-enter {
   from {
     opacity: 0;
@@ -1228,6 +1234,10 @@
   font-size: 16px;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.todo-name-input + label {
+  margin-top: 16px;
 }
 
 .todo-text-editor:empty::before {
@@ -1822,4 +1832,298 @@
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  color: #e2e6f2;
+  background: #111522;
+}
+
+:root[data-theme="dark"] body {
+  background: #111522;
+}
+
+:root[data-theme="dark"] .app-shell {
+  color: #e2e6f2;
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(71, 79, 119, 0.3), transparent 42%),
+    linear-gradient(145deg, #1a1e2d 0%, #151a29 52%, #111522 100%);
+}
+
+:root[data-theme="dark"] .topbar {
+  background: rgba(25, 29, 44, 0.88);
+  border-color: #30364b;
+}
+
+:root[data-theme="dark"] .brand,
+:root[data-theme="dark"] .intro h1,
+:root[data-theme="dark"] .card-heading h2 {
+  color: #e7eaf5;
+}
+
+:root[data-theme="dark"] .eyebrow,
+:root[data-theme="dark"] .dialog-eyebrow {
+  color: #a4aed0;
+}
+
+:root[data-theme="dark"] .intro-copy,
+:root[data-theme="dark"] .card-subtitle {
+  color: #a2abc0;
+}
+
+:root[data-theme="dark"] .todo-card {
+  background: rgba(28, 33, 49, 0.96);
+  border-color: #30364b;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24);
+}
+
+:root[data-theme="dark"] .button-secondary,
+:root[data-theme="dark"] .todo-action-icon:not(.add-button),
+:root[data-theme="dark"] .sort-menu-button,
+:root[data-theme="dark"] .todo-tree-button,
+:root[data-theme="dark"] .reset-filter-button,
+:root[data-theme="dark"] .search-match-button {
+  color: #d0d6e8;
+  background: #252b3e;
+  border-color: #3a425b;
+}
+
+:root[data-theme="dark"] .button-secondary:hover,
+:root[data-theme="dark"] .todo-action-icon:not(.add-button):hover,
+:root[data-theme="dark"] .sort-menu-button:hover,
+:root[data-theme="dark"] .sort-menu-button[aria-expanded="true"],
+:root[data-theme="dark"] .todo-tree-button:hover:not(:disabled),
+:root[data-theme="dark"] .reset-filter-button:hover,
+:root[data-theme="dark"] .search-match-button:hover:not(:disabled) {
+  color: #c4ccff;
+  background: #303750;
+  border-color: #515d85;
+}
+
+:root[data-theme="dark"] .todo-action-icon:focus-visible,
+:root[data-theme="dark"] .button:focus-visible {
+  outline-color: rgba(153, 167, 255, 0.55);
+}
+
+:root[data-theme="dark"] .search-control,
+:root[data-theme="dark"] .todo-list-header,
+:root[data-theme="dark"] .storage-note {
+  color: #aab2c8;
+  background: #202538;
+  border-color: #343b52;
+}
+
+:root[data-theme="dark"] .search-control input,
+:root[data-theme="dark"] .todo-title-cell {
+  color: #e0e5f2;
+}
+
+:root[data-theme="dark"] .search-control input::placeholder,
+:root[data-theme="dark"] .todo-text-editor:empty::before {
+  color: #929cb5;
+}
+
+:root[data-theme="dark"] .search-control:focus-within {
+  border-color: #7583ca;
+}
+
+:root[data-theme="dark"] .search-sort-tools,
+:root[data-theme="dark"] .tag-filter-bar {
+  background: rgba(28, 33, 49, 0.96);
+}
+
+:root[data-theme="dark"] .tag-filter-bar {
+  scrollbar-color: #48516d transparent;
+}
+
+:root[data-theme="dark"] .tag-filter-all {
+  color: #d0d6e8;
+  background: #252b3e;
+  border-color: #3a425b;
+}
+
+:root[data-theme="dark"] .todo-count {
+  color: #c4ccff;
+  background: #2a3150;
+}
+
+:root[data-theme="dark"] .sort-menu,
+:root[data-theme="dark"] .todo-actions-dropdown {
+  background: #242a3d;
+  border-color: #3a425b;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .sort-menu-item,
+:root[data-theme="dark"] .todo-actions-dropdown button {
+  color: #d0d6e8;
+}
+
+:root[data-theme="dark"] .sort-menu-item:hover,
+:root[data-theme="dark"] .sort-menu-item[aria-checked="true"],
+:root[data-theme="dark"] .todo-actions-dropdown button:hover:not(:disabled) {
+  color: #c4ccff;
+  background: #303750;
+}
+
+:root[data-theme="dark"] .table-wrap {
+  border-color: #343b52;
+}
+
+:root[data-theme="dark"] .todo-row {
+  border-color: #343b52;
+}
+
+:root[data-theme="dark"] .todo-node-top-level {
+  border-color: #414a66;
+}
+
+:root[data-theme="dark"] .search-match {
+  color: #d5dcff;
+  background: #39436a;
+}
+
+:root[data-theme="dark"] .view-description-button,
+:root[data-theme="dark"] .edit-todo-button,
+:root[data-theme="dark"] .add-subtodo-button,
+:root[data-theme="dark"] .todo-actions-menu-button,
+:root[data-theme="dark"] .move-todo-button,
+:root[data-theme="dark"] .saved-tag-action {
+  color: #aab5e8;
+}
+
+:root[data-theme="dark"] .view-description-button:hover,
+:root[data-theme="dark"] .edit-todo-button:hover,
+:root[data-theme="dark"] .add-subtodo-button:hover,
+:root[data-theme="dark"] .todo-actions-menu-button:hover,
+:root[data-theme="dark"] .todo-actions-menu-button[aria-expanded="true"],
+:root[data-theme="dark"] .move-todo-button:hover:not(:disabled),
+:root[data-theme="dark"] .saved-tag-action:hover {
+  color: #d0d7ff;
+  background: #303750;
+}
+
+:root[data-theme="dark"] .empty-state {
+  color: #a4abc0 !important;
+}
+
+:root[data-theme="dark"] .empty-state strong {
+  color: #d3d9e8;
+}
+
+:root[data-theme="dark"] .storage-dot {
+  box-shadow: 0 0 0 3px #303750;
+}
+
+:root[data-theme="dark"] .dialog-backdrop {
+  background: rgba(4, 6, 12, 0.72);
+}
+
+:root[data-theme="dark"] .add-dialog {
+  color: #e0e5f2;
+  background: rgba(29, 34, 50, 0.98);
+  border-color: #3a425b;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme="dark"] .dialog-heading h2,
+:root[data-theme="dark"] .dialog-form > label,
+:root[data-theme="dark"] .todo-tag-picker legend,
+:root[data-theme="dark"] .tree-line-color-control,
+:root[data-theme="dark"] .tag-color-control,
+:root[data-theme="dark"] .existing-tags {
+  color: #dce2f0;
+}
+
+:root[data-theme="dark"] .dialog-close {
+  color: #c0c8dc;
+  background: #2b3146;
+}
+
+:root[data-theme="dark"] .dialog-close:hover {
+  color: #e9edfa;
+  background: #363e58;
+}
+
+:root[data-theme="dark"] .parent-context {
+  color: #b8c2e0;
+  background: #252c43;
+  border-color: #3b4563;
+}
+
+:root[data-theme="dark"] .parent-context strong,
+:root[data-theme="dark"] .todo-description-view code {
+  color: #c4ccff;
+}
+
+:root[data-theme="dark"] .dialog-form > input,
+:root[data-theme="dark"] .todo-name-input,
+:root[data-theme="dark"] .todo-description-input,
+:root[data-theme="dark"] .tag-create-fields > input {
+  color: #e0e5f2;
+  background: #171c2a;
+  border-color: #3b435c;
+}
+
+:root[data-theme="dark"] .todo-name-input:focus,
+:root[data-theme="dark"] .todo-description-input:focus,
+:root[data-theme="dark"] .tag-create-fields > input:focus {
+  border-color: #7583ca;
+}
+
+:root[data-theme="dark"] .optional-label,
+:root[data-theme="dark"] .tag-picker-empty,
+:root[data-theme="dark"] .tree-line-color-help,
+:root[data-theme="dark"] .delete-confirmation-copy {
+  color: #a5aec4;
+}
+
+:root[data-theme="dark"] .todo-description-view {
+  color: #c7cede;
+}
+
+:root[data-theme="dark"] .todo-description-view pre {
+  background: #171c2a;
+}
+
+:root[data-theme="dark"] .todo-description-view a {
+  color: #aab8ff;
+}
+
+:root[data-theme="dark"] .todo-tag-picker {
+  border-color: #3a425b;
+}
+
+:root[data-theme="dark"] .tag-create-fields > input,
+:root[data-theme="dark"] .tag-color-control input,
+:root[data-theme="dark"] .tree-line-color-control input {
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] .tag-color-control input,
+:root[data-theme="dark"] .tree-line-color-control input {
+  background: #252b3e;
+  border-color: #3a425b;
+}
+
+:root[data-theme="dark"] .saved-tag-item {
+  background: #202538;
+  border-color: #343b52;
+}
+
+:root[data-theme="dark"] .todo-actions-dropdown .todo-actions-dropdown-delete {
+  color: #f0a3a3;
+}
+
+:root[data-theme="dark"] .todo-actions-dropdown .todo-actions-dropdown-delete:hover,
+:root[data-theme="dark"] .delete-button:hover,
+:root[data-theme="dark"] .saved-tag-delete:hover {
+  color: #ffb6b6;
+  background: #482d37;
+}
+
+:root[data-theme="dark"] ::selection {
+  color: #f2f4ff;
+  background: #4a5687;
 }
