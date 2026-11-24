@@ -13,7 +13,6 @@ import "./App.css";
 type Todo = {
   id: string;
   text: string;
-  description?: string;
   completed: boolean;
   createdAt: string;
   parentId?: string | null;
@@ -90,7 +89,6 @@ function isTodo(value: unknown): value is Todo {
   return (
     typeof todo.id === "string" &&
     typeof todo.text === "string" &&
-    (todo.description === undefined || typeof todo.description === "string") &&
     typeof todo.completed === "boolean" &&
     typeof todo.createdAt === "string" &&
     (todo.parentId === undefined ||
@@ -140,9 +138,13 @@ function isValidTodoCollection(value: unknown): value is Todo[] {
 }
 
 function migrateTodoTreeLineColor(todo: Todo): Todo {
-  return PREVIOUS_DEFAULT_TREE_LINE_COLORS.has(todo.treeLineColor?.toLowerCase() ?? "")
-    ? { ...todo, treeLineColor: DEFAULT_TREE_LINE_COLOR }
-    : todo;
+  const todoWithoutDescription = { ...todo } as Todo & { description?: string };
+  delete todoWithoutDescription.description;
+  return PREVIOUS_DEFAULT_TREE_LINE_COLORS.has(
+    todoWithoutDescription.treeLineColor?.toLowerCase() ?? "",
+  )
+    ? { ...todoWithoutDescription, treeLineColor: DEFAULT_TREE_LINE_COLOR }
+    : todoWithoutDescription;
 }
 
 function isTodoTag(value: unknown): value is TodoTag {
@@ -234,98 +236,15 @@ function getTagTextColor(color: string): string {
   return luminance > 0.62 ? "#243c50" : "#ffffff";
 }
 
-function renderMarkdown(markdown: string): ReactNode[] {
-  const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
-  const rendered: ReactNode[] = [];
-  let paragraph: string[] = [];
-  let i = 0;
-
-  const flushParagraph = () => {
-    if (!paragraph.length) return;
-    rendered.push(<p key={`p-${rendered.length}`}>{renderInlineMarkdown(paragraph.join("\n"))}</p>);
-    paragraph = [];
-  };
-
-  while (i < lines.length) {
-    const line = lines[i];
-    if (!line.trim()) {
-      flushParagraph();
-      i += 1;
-      continue;
-    }
-
-    const heading = line.match(/^(#{1,6})\s+(.+)$/);
-    if (heading) {
-      flushParagraph();
-      const level = heading[1].length;
-      const headingContent = renderInlineMarkdown(heading[2]);
-      if (level === 1) rendered.push(<h1 key={`heading-${rendered.length}`}>{headingContent}</h1>);
-      else if (level === 2) rendered.push(<h2 key={`heading-${rendered.length}`}>{headingContent}</h2>);
-      else if (level === 3) rendered.push(<h3 key={`heading-${rendered.length}`}>{headingContent}</h3>);
-      else if (level === 4) rendered.push(<h4 key={`heading-${rendered.length}`}>{headingContent}</h4>);
-      else if (level === 5) rendered.push(<h5 key={`heading-${rendered.length}`}>{headingContent}</h5>);
-      else rendered.push(<h6 key={`heading-${rendered.length}`}>{headingContent}</h6>);
-      i += 1;
-      continue;
-    }
-
-    if (line.trim().startsWith("```")) {
-      flushParagraph();
-      const code: string[] = [];
-      i += 1;
-      while (i < lines.length && !lines[i].trim().startsWith("```")) {
-        code.push(lines[i]);
-        i += 1;
-      }
-      rendered.push(<pre key={`code-${rendered.length}`}><code>{code.join("\n")}</code></pre>);
-      i += 1;
-      continue;
-    }
-
-    const listItem = line.match(/^\s*[-*+]\s+(.+)$/);
-    if (listItem) {
-      flushParagraph();
-      const items: string[] = [];
-      while (i < lines.length) {
-        const item = lines[i].match(/^\s*[-*+]\s+(.+)$/);
-        if (!item) break;
-        items.push(item[1]);
-        i += 1;
-      }
-      rendered.push(<ul key={`list-${rendered.length}`}>{items.map((item, index) => <li key={index}>{renderInlineMarkdown(item)}</li>)}</ul>);
-      continue;
-    }
-
-    paragraph.push(line);
-    i += 1;
-  }
-  flushParagraph();
-  return rendered;
-}
-
-function renderInlineMarkdown(text: string): ReactNode[] {
-  const tokens = text.split(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g);
-  return tokens.map((token, index) => {
-    if (token.startsWith("`") && token.endsWith("`")) return <code key={index}>{token.slice(1, -1)}</code>;
-    if (token.startsWith("**") && token.endsWith("**")) return <strong key={index}>{token.slice(2, -2)}</strong>;
-    if (token.startsWith("*") && token.endsWith("*")) return <em key={index}>{token.slice(1, -1)}</em>;
-    const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-    if (link) return <a key={index} href={link[2]} target="_blank" rel="noreferrer">{link[1]}</a>;
-    return token;
-  });
-}
-
 function TodoTextEditor({
   id,
   value,
   onChange,
-  multiline = false,
   editorRef: providedEditorRef,
 }: {
   id: string;
   value: string;
   onChange: (value: string) => void;
-  multiline?: boolean;
   editorRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   const internalEditorRef = useRef<HTMLDivElement>(null);
@@ -343,13 +262,13 @@ function TodoTextEditor({
     <div
       ref={editorRef}
       id={id}
-      className={multiline ? "todo-description-input todo-text-editor" : "todo-name-input todo-text-editor"}
+      className="todo-name-input todo-text-editor"
       role="textbox"
-      aria-multiline={multiline}
+      aria-multiline
       contentEditable
       suppressContentEditableWarning
       spellCheck={false}
-      data-placeholder={multiline ? "Add notes or Markdown details..." : "What would you like to get done?"}
+      data-placeholder="What would you like to get done?"
       onInput={(event) => {
         const text = event.currentTarget.textContent ?? "";
         onChange(text);
@@ -362,8 +281,6 @@ function App() {
   const [todos, setTodos] = useState<Todo[]>(readTodos);
   const [tags, setTags] = useState<TodoTag[]>(readTodoTags);
   const [todoText, setTodoText] = useState("");
-  const [todoDescription, setTodoDescription] = useState("");
-  const [descriptionTodo, setDescriptionTodo] = useState<Todo | null>(null);
   const [treeLineColor, setTreeLineColor] = useState(
     DEFAULT_TREE_LINE_COLOR,
   );
@@ -524,19 +441,18 @@ function App() {
   }, [todos]);
 
   useEffect(() => {
-    if (deleteConfirmation || (!todoDialog && !isTagDialogOpen && !descriptionTodo)) return;
+    if (deleteConfirmation || (!todoDialog && !isTagDialogOpen)) return;
     if (todoDialog) todoInputRef.current?.focus();
     if (isTagDialogOpen) tagInputRef.current?.focus();
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         if (isTagDialogOpen) setIsTagDialogOpen(false);
-        else if (descriptionTodo) setDescriptionTodo(null);
         else closeTodoDialog();
       }
     }
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [todoDialog, isTagDialogOpen, deleteConfirmation, descriptionTodo]);
+  }, [todoDialog, isTagDialogOpen, deleteConfirmation]);
 
   useEffect(() => {
     if (!todoActionsMenu) return;
@@ -742,7 +658,6 @@ function App() {
 
   function openAddDialog(parentId: string | null = null) {
     setTodoText("");
-    setTodoDescription("");
     setTreeLineColor(DEFAULT_TREE_LINE_COLOR);
     setSelectedTagIds([]);
     setTodoDialog({ mode: "add", parentId });
@@ -751,7 +666,6 @@ function App() {
 
   function openEditDialog(todo: Todo) {
     setTodoText(todo.text);
-    setTodoDescription(todo.description ?? "");
     setTreeLineColor(todo.treeLineColor ?? DEFAULT_TREE_LINE_COLOR);
     setSelectedTagIds(todo.tagIds ?? []);
     setTodoDialog({ mode: "edit", todoId: todo.id });
@@ -761,7 +675,6 @@ function App() {
   function closeTodoDialog() {
     setTodoDialog(null);
     setTodoText("");
-    setTodoDescription("");
     setTreeLineColor(DEFAULT_TREE_LINE_COLOR);
     setSelectedTagIds([]);
   }
@@ -769,7 +682,6 @@ function App() {
   function saveTodo(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = todoText.trim();
-    const description = todoDescription.trim() ? todoDescription.replace(/\r\n?/g, "\n") : "";
     if (!text || !todoDialog) return;
 
     if (todoDialog.mode === "edit") {
@@ -779,7 +691,6 @@ function App() {
             ? {
                 ...todo,
                 text,
-                description,
                 tagIds: selectedTagIds,
                 treeLineColor: treeLineColor.toUpperCase(),
               }
@@ -791,7 +702,6 @@ function App() {
       const newTodo: Todo = {
         id: makeId(),
         text,
-        description,
         completed: false,
         createdAt: new Date().toISOString(),
         parentId: todoDialog.parentId,
@@ -1072,19 +982,6 @@ function App() {
                     <path d="M10 4v12M4 10h12" />
                   </svg>
                 </button>
-                {todo.description?.trim() && (
-                  <button
-                    className="view-description-button"
-                    type="button"
-                    onClick={() => setDescriptionTodo(todo)}
-                    aria-label={`View description for ${todo.text}`}
-                    title="View description"
-                  >
-                    <svg viewBox="0 0 20 20" aria-hidden="true">
-                      <path d="M4 3.5h12v13H4zM7 7h6M7 10h6M7 13h4" />
-                    </svg>
-                  </button>
-                )}
                 <button
                   className="edit-todo-button"
                   type="button"
@@ -1770,15 +1667,6 @@ function App() {
                 onChange={setTodoText}
                 editorRef={todoInputRef}
               />
-              <label htmlFor="todo-description">
-                Description <span className="optional-label">(optional)</span>
-              </label>
-              <TodoTextEditor
-                id="todo-description"
-                value={todoDescription}
-                onChange={setTodoDescription}
-                multiline
-              />
               <div className="tree-line-color-control">
                 <label htmlFor="todo-tree-line-color">
                   Subtodo tree line color
@@ -1846,49 +1734,6 @@ function App() {
                 </button>
               </div>
             </form>
-          </section>
-        </div>
-      )}
-
-      {descriptionTodo && (
-        <div
-          className="dialog-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setDescriptionTodo(null);
-          }}
-        >
-          <section
-            className="add-dialog description-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="description-dialog-title"
-          >
-            <div className="dialog-heading">
-              <div>
-                <p className="dialog-eyebrow">TODO DESCRIPTION</p>
-                <h2 id="description-dialog-title">{descriptionTodo.text}</h2>
-              </div>
-              <button
-                className="dialog-close"
-                type="button"
-                onClick={() => setDescriptionTodo(null)}
-                aria-label="Close description"
-              >
-                ×
-              </button>
-            </div>
-            <div className="todo-description-view">
-              {renderMarkdown(descriptionTodo.description ?? "")}
-            </div>
-            <div className="dialog-actions">
-              <button
-                className="button button-primary"
-                type="button"
-                onClick={() => setDescriptionTodo(null)}
-              >
-                Close
-              </button>
-            </div>
           </section>
         </div>
       )}

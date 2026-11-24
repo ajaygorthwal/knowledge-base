@@ -792,7 +792,6 @@
   text-underline-offset: 3px;
 }
 
-.view-description-button,
 .edit-todo-button {
   width: 32px;
   height: 32px;
@@ -805,13 +804,11 @@
   cursor: pointer;
 }
 
-.view-description-button:hover,
 .edit-todo-button:hover {
   color: #536bea;
   background: #eff0ff;
 }
 
-.view-description-button svg,
 .edit-todo-button svg {
   width: 18px;
   height: 18px;
@@ -988,7 +985,6 @@
 
 .add-subtodo-button:focus-visible,
 .move-todo-button:focus-visible,
-.view-description-button:focus-visible,
 .edit-todo-button:focus-visible,
 .dialog-close:focus-visible {
   outline: 3px solid rgba(83, 107, 234, 0.35);
@@ -1205,23 +1201,6 @@
   font-weight: 500;
 }
 
-.todo-description-input {
-  width: 100%;
-  min-height: 110px;
-  resize: vertical;
-  padding: 12px 13px;
-  color: #383d54;
-  background: #fcfcff;
-  border: 1px solid #e3e5f6;
-  border-radius: 9px;
-  outline: 0;
-  font: inherit;
-  font-size: 14px;
-  line-height: 1.55;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
 .todo-name-input {
   width: 100%;
   min-height: 48px;
@@ -1246,33 +1225,10 @@
   pointer-events: none;
 }
 
-.todo-description-input:focus,
 .todo-name-input:focus {
   border-color: #a4b0f0;
   box-shadow: 0 0 0 3px rgba(83, 107, 234, 0.16);
 }
-
-.description-dialog {
-  width: min(100%, 620px);
-  max-height: min(80vh, 720px);
-  overflow: hidden;
-}
-
-.todo-description-view {
-  max-height: 55vh;
-  margin-top: 22px;
-  overflow-y: auto;
-  color: #454960;
-  line-height: 1.65;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-}
-
-.todo-description-view > :first-child { margin-top: 0; }
-.todo-description-view > :last-child { margin-bottom: 0; }
-.todo-description-view pre { overflow-x: auto; padding: 12px; background: #f4f5fb; border-radius: 8px; }
-.todo-description-view code { color: #3f4bb2; }
-.todo-description-view a { color: #536bea; }
 
 .todo-tag-picker {
   min-width: 0;
@@ -1752,7 +1708,6 @@
     height: 44px;
   }
 
-  .view-description-button,
   .edit-todo-button {
     width: 32px;
     height: 44px;
@@ -1815,7 +1770,6 @@
     width: 34px;
   }
 
-  .view-description-button,
   .edit-todo-button {
     width: 31px;
   }
@@ -1984,7 +1938,6 @@
   background: #39436a;
 }
 
-:root[data-theme="dark"] .view-description-button,
 :root[data-theme="dark"] .edit-todo-button,
 :root[data-theme="dark"] .add-subtodo-button,
 :root[data-theme="dark"] .todo-actions-menu-button,
@@ -1993,7 +1946,6 @@
   color: #aab5e8;
 }
 
-:root[data-theme="dark"] .view-description-button:hover,
 :root[data-theme="dark"] .edit-todo-button:hover,
 :root[data-theme="dark"] .add-subtodo-button:hover,
 :root[data-theme="dark"] .todo-actions-menu-button:hover,
@@ -2053,13 +2005,8 @@
 }
 
 :root[data-theme="dark"] .parent-context strong,
-:root[data-theme="dark"] .todo-description-view code {
-  color: #c4ccff;
-}
-
 :root[data-theme="dark"] .dialog-form > input,
 :root[data-theme="dark"] .todo-name-input,
-:root[data-theme="dark"] .todo-description-input,
 :root[data-theme="dark"] .tag-create-fields > input {
   color: #e0e5f2;
   background: #171c2a;
@@ -2067,7 +2014,6 @@
 }
 
 :root[data-theme="dark"] .todo-name-input:focus,
-:root[data-theme="dark"] .todo-description-input:focus,
 :root[data-theme="dark"] .tag-create-fields > input:focus {
   border-color: #7583ca;
 }
@@ -2079,17 +2025,6 @@
   color: #a5aec4;
 }
 
-:root[data-theme="dark"] .todo-description-view {
-  color: #c7cede;
-}
-
-:root[data-theme="dark"] .todo-description-view pre {
-  background: #171c2a;
-}
-
-:root[data-theme="dark"] .todo-description-view a {
-  color: #aab8ff;
-}
 
 :root[data-theme="dark"] .todo-tag-picker {
   border-color: #3a425b;
